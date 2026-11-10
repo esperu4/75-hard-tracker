@@ -602,12 +602,19 @@ async function api(path, { method = 'GET', body, raw } = {}) {
 const DROP = new Set(['thumb', 'needsRender', 'workoutOut', 'workoutIn', 'ex', 'key', 'name']); // local-only or legacy fields
 function exportJSON() {
   const days = Object.fromEntries(Object.entries(state.days).filter(([, e]) => e.updatedAt));
-  return JSON.stringify({ startDate: state.startDate, startSetAt: state.startSetAt, days }, (k, v) => DROP.has(k) ? undefined : v, 1);
+  return JSON.stringify({ startDate: state.startDate, startSetAt: state.startSetAt, resetAt: state.resetAt || 0, days }, (k, v) => DROP.has(k) ? undefined : v, 1);
 }
 async function pull() {
   const txt = await api(`/contents/data.json?ref=${encodeURIComponent(settings.branch)}`, { raw: true });
   if (!txt) return;
   const remote = JSON.parse(txt);
+  // the data repo was wiped (fresh start): drop everything this device still has
+  if ((remote.resetAt || 0) > (state.resetAt || 0)) {
+    state = { startDate: remote.startDate, startSetAt: remote.startSetAt || 0, resetAt: remote.resetAt, days: {} };
+    dirty.clear(); metaDirty = false;
+    for (const p of pendingPhotos()) LS.del('h75.photo.' + p.date);
+    cur = todayISO(); showNext = false;
+  }
   if ((remote.startSetAt || 0) > (state.startSetAt || 0)) { state.startDate = remote.startDate; state.startSetAt = remote.startSetAt; }
   for (const [d, re] of Object.entries(remote.days || {})) {
     const le = state.days[d];
