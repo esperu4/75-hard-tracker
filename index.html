@@ -333,7 +333,12 @@ function newEntry(date) {
 }
 function entry(d) {
   const e = state.days[d] || (state.days[d] = newEntry(d));
-  if (!e.out || !e.inside) { const n = newEntry(d); e.out ||= n.out; e.inside ||= n.inside; } // older format
+  // fill anything missing (older format, or an entry created outside the app, e.g. a ride logged from Strava)
+  const n = newEntry(d);
+  for (const k of Object.keys(n)) {
+    if (e[k] === undefined || e[k] === null && n[k] !== null) e[k] = n[k];
+    else if (n[k] && typeof n[k] === 'object' && !Array.isArray(n[k]) && typeof e[k] === 'object') for (const s of Object.keys(n[k])) if (e[k][s] === undefined) e[k][s] = n[k][s];
+  }
   return e;
 }
 const count = e => e ? CHECKS.filter(([k]) => e.check?.[k]).length : 0;
@@ -622,6 +627,8 @@ async function pull() {
       if (thumb && re.photo) re.photo.thumb = thumb;
       state.days[d] = re; dirty.delete(d);
     }
+    // a change made outside the app (ride logged from Strava): rebuild its day page + README on the next push
+    if (state.days[d].needsRender) { delete state.days[d].needsRender; entry(d); dirty.add(d); }
   }
   persist();
 }
@@ -634,7 +641,7 @@ function dayMd(e) {
     '## Food', `- **Breakfast:** ${e.meals.breakfast}`, `- **Lunch:** ${e.meals.lunch}`, `- **Dinner:** ${e.meals.dinner}`, `- **Snacks:** ${e.meals.snacks}`,
     `- **Water:** ${(e.water / 1000).toFixed(2)} L`, '',
   ];
-  if (e.out) L.push(`## Workout — outside ${e.out.done ? '✅' : ''}`, `${e.out.type} · ${e.out.min || '–'} min · ${e.out.km || '–'} km`, e.out.notes || '', '');
+  if (e.out) L.push(`## Workout — outside ${e.out.done ? '✅' : ''}`, `${e.out.type} · ${e.out.min || '–'} min · ${e.out.km || '–'} km${e.out.route ? ` · [route (GPX)](../${e.out.route})` : ''}`, e.out.notes || '', '');
   if (e.inside) L.push(`## Workout — inside: ${e.inside.name} ${e.inside.done ? '✅' : ''}`, '| Exercise | Target | Sets |', '|---|---|---|',
     ...e.inside.ex.map(x => `| ${x.n} | ${x.t} | ${x.s.map(v => v || '·').join(' / ')} |`), '', e.inside.notes || '', '');
   if (e.workoutOut || e.workoutIn) L.push('## Workouts', '```', e.workoutOut || '', e.workoutIn || '', '```', '');
