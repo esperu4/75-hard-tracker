@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1216">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>75 Hard Tracker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--ink:#14171c;--muted:#6b7380;--line:#e2e5ea;
+  --accent:#e4572e;--accent-ink:#fff;--ok:#1f9d55;--warn:#d97706;--part:#f5c26b;--miss:#e5484d;
+  --field:#f7f8fa;--radius:14px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1216;--card:#181c22;--ink:#eef0f3;--muted:#98a1ae;--line:#2a3039;
+  --field:#11151a;--part:#b7862f;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:12px 16px calc(10px);border-bottom:1px solid var(--line)}
+header b{letter-spacing:.08em}
+#sync{font-size:13px;color:var(--muted);background:none;border:0;padding:4px 0;cursor:pointer}
+main{max-width:640px;margin:0 auto;padding:12px 16px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;background:none;border:0;color:var(--muted);padding:12px 0;font:inherit;font-size:14px}
+nav button.on{color:var(--accent);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:12px 0}
+.card h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.muted{color:var(--muted);font-size:13px}
+.datebar{display:flex;align-items:center;justify-content:space-between;text-align:center;margin:6px 0}
+.datebar button{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:22px}
+.datebar button:disabled{opacity:.3}
+.dnum{font-size:30px;font-weight:800}
+.dnum small{font-size:15px;color:var(--muted);font-weight:500}
+.pill{font-size:12px;padding:3px 9px;border-radius:99px;background:var(--field);border:1px solid var(--line);white-space:nowrap}
+.pill.ok{background:var(--ok);color:#fff;border-color:var(--ok)}
+.chk{display:flex;gap:12px;align-items:center;padding:9px 2px;border-bottom:1px solid var(--line)}
+.chk:last-child{border-bottom:0}
+.chk input{width:22px;height:22px;accent-color:var(--ok)}
+.fld{display:block;margin:8px 0}
+.fld>span{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+input[type=text],input[type=number],input[type=password],input[type=date],textarea{
+  width:100%;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+textarea{resize:vertical;field-sizing:content;min-height:44px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rate{display:flex;gap:6px}
+.rate button{flex:1;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);font-size:18px}
+.rate button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.water{display:flex;align-items:center;gap:10px}
+.water button{width:52px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);font-size:15px}
+.bar{flex:1;height:12px;background:var(--field);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:#3b82f6}
+.switch{font-size:13px;font-weight:500;display:flex;gap:6px;align-items:center}
+.btn{display:block;width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:600;margin:8px 0}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.banner{background:color-mix(in srgb,var(--miss) 14%,var(--card));border:1px solid var(--miss);border-radius:var(--radius);padding:12px 14px;margin:10px 0}
+.banner .btns{display:flex;gap:8px;margin-top:8px}
+.banner .btn{margin:0;padding:9px}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.grid button{aspect-ratio:1;border-radius:7px;border:1px solid var(--line);background:var(--field);color:var(--muted);font-size:11px;padding:0}
+.grid .done{background:var(--ok);border-color:var(--ok);color:#fff}
+.grid .part{background:var(--part);border-color:var(--part);color:#000}
+.grid .miss{background:color-mix(in srgb,var(--miss) 25%,var(--field));border-color:var(--miss)}
+.grid .today{outline:2px solid var(--accent);outline-offset:1px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font-size:22px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.photo img{width:100%;max-width:240px;border-radius:10px;display:block;margin:8px 0}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;z-index:9}
+#toast.on{opacity:1}
+svg text{fill:var(--muted);font-size:9px}
+code{background:var(--field);padding:1px 5px;border-radius:5px;font-size:13px}
+ol{padding-left:20px}
+</style>
+</head>
+<body>
+<header><b>75 HARD</b><button id="sync" data-act="sync"></button></header>
+<main id="view"></main>
+<nav>
+  <button data-act="go" data-v="today">Today</button>
+  <button data-act="go" data-v="progress">Progress</button>
+  <button data-act="go" data-v="settings">Settings</button>
+</nav>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ============ TEMPLATES (from the 75 Hard journal + personal plan) ============ */
+const DEFAULT_START = '2026-11-11';
+const DEFAULTS = { owner: 'esperu4', repo: '75-hard-data', branch: 'main', token: '' };
+
+const CHECKS = [
+  ['diet', 'Follow the diet'],
+  ['alcohol', 'No alcohol or cheat meals'],
+  ['workouts', 'Two 45-min workouts (1 outside)'],
+  ['water', '1 gallon of water (3.8 L)'],
+  ['photo', 'Progress photo'],
+  ['reading', 'Read 10 pages of nonfiction'],
+];
+
+const W = {
+  lowerA: `Lower A
+- Goblet squat 8 kg, 3s down + 1s pause, 4×12–20:
+- Bulgarian split squat (stair), 3×8–12/leg:
+- Single-leg RDL 8 kg, 3×10–12/leg:
+- Nordic curl negative, 3×3–6:
+- Single-leg calf raise (stair + DB), 3×15–20:
+- Dead bug, 3×10/side: `,
+  upperA: `Upper A (push)
+- Push-ups, 4 × 1–2 short of failure:
+- Inverted row under table, 4×8–15:
+- Single-arm overhead press 7/8 kg, 3×8–12/arm:
+- Dips (stair/table edge), 3×10–15:
+- Single-arm DB row, 3×12–15/arm:
+- Hammer curl 7+8 kg, 2×12–15:
+- Plank, 2×45–60 s: `,
+  lowerB: `Lower B
+- Step-up (high stair) with DBs, 3×10/leg:
+- Two-DB RDL 15 kg, 3s down, 4×12–15:
+- Cossack squat 8 kg, 3×6–8/side:
+- Reverse lunge with DBs, 3×10/leg:
+- Single-leg glute bridge + DB, 3×12–15/leg:
+- Side plank, 3×30–45 s/side: `,
+  upperB: `Upper B (pull)
+- Inverted row under table, 4×8–15:
+- DB pullover 8 kg, 3×12–15:
+- Floor press 7+8 kg, slow down, 4×12–20:
+- Renegade row, 3×6–8/side:
+- Pike push-up (feet on stair), 3×6–12:
+- Rear-delt fly 7 kg, 3×15: `,
+  recovery: `Recovery (core + mobility)
+- 3 rounds: dead bug 10/side · bird dog 10/side · side plank 30 s · glute bridge 15 · hollow hold 20–30 s
+- 20 min mobility: hip flexors, hamstrings, calves, T-spine, deep squat, pigeon
+- 10 min slow ladder/grid technique`,
+  ladder: `Ladder + dumbbell conditioning
+- Warm-up 8 min: ladder drills 1–3 slow
+- Block A ×6: drill → 10 push-ups → drill → 15 squats → 60 s rest
+- Block B ×4 (40/20): thrusters · renegade rows · jump squats · mountain climbers · sit-ups
+- Finisher: grid X hops 3×30 s
+- Stretch 5 min`,
+  mobility: `Mobility + core (easy)
+- 3 rounds: dead bug · bird dog · side plank · glute bridge · hollow hold
+- 20 min mobility: hips, hamstrings, calves, T-spine`,
+};
+const BIKE = 'Bike 06:15–08:45 (easy pace)\nDistance/time: ';
+const SCHEDULE = { // getDay(): 0=Sun
+  1: { out: BIKE, in: W.lowerA },
+  2: { out: 'Compound ladder session or 45-min brisk walk\n', in: W.upperA },
+  3: { out: BIKE, in: W.recovery },
+  4: { out: BIKE, in: W.lowerB },
+  5: { out: BIKE, in: W.upperB },
+  6: { out: 'Long easy ride or walk/hike\n', in: W.ladder },
+  0: { out: 'Compound ladder session or 45-min walk\n', in: W.mobility },
+};
+const MEALS = {
+  fast: {
+    breakfast: 'Ful (~70 g dry fava) + tomato, onion, chili + 1 small injera',
+    lunch: '1 injera + thick shiro (~50 g) + gomen + salata',
+    dinner: '1–1.5 injera + misir wot (~70 g) + kik alicha (~50 g) + atkilt',
+    snacks: 'Kolo before ride · boiled shimbra/bakela (~60 g) or telba',
+  },
+  normal: {
+    breakfast: '3–4 eggs (little oil) + ayib ~150 g + 1 small injera',
+    lunch: '1 injera + tibs ~200 g (little oil) + gomen',
+    dinner: '1 injera + misir wot + atkilt',
+    snacks: 'Kolo before ride · ayib or boiled shimbra',
+  },
+};
+function fastInfo(d) {
+  const dow = parse(d).getDay();
+  if (d >= '2026-11-24' && d <= '2027-01-06') return { fast: true, label: 'Tsome Nebiyat (Advent fast)' };
+  if (d === '2027-01-07') return { fast: false, label: 'Genna 🎉 — normal portions, no tella/tej' };
+  if (d === '2027-01-18') return { fast: true, label: 'Ketera — Timket eve' };
+  if (d === '2027-01-19') return { fast: false, label: 'Timket 🎉 — normal portions, no tella/tej' };
+  if (dow === 3) return { fast: true, label: 'Wednesday fast' };
+  if (dow === 5) return { fast: true, label: 'Friday fast' };
+  return { fast: false, label: 'Non-fasting day' };
+}
+
+/* ============ STORAGE ============ */
+const LS = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { toast('Storage problem: ' + e.message); return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+let settings = { ...DEFAULTS, ...LS.get('h75.settings', {}) };
+let state = LS.get('h75.data', { startDate: DEFAULT_START, startSetAt: 0, days: {} });
+let dirty = new Set(LS.get('h75.dirty', []));
+let metaDirty = LS.get('h75.metaDirty', false);
+let view = 'today';
+let cur = todayISO();
+let syncing = false, syncErr = '', syncTimer = null;
+
+function persist() {
+  LS.set('h75.data', state);
+  LS.set('h75.dirty', [...dirty]);
+  LS.set('h75.metaDirty', metaDirty);
+}
+const configured = () => settings.owner && settings.repo && settings.token;
+
+/* ============ DATES ============ */
+function pad(n) { return String(n).padStart(2, '0'); }
+function iso(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function parse(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function todayISO() { return iso(new Date()); }
+function addDays(s, n) { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); }
+function diff(a, b) { return Math.round((parse(b) - parse(a)) / 864e5); }
+function dayNum(s) { return diff(state.startDate, s) + 1; }
+function fmt(s, o = { weekday: 'short', day: 'numeric', month: 'short' }) { return parse(s).toLocaleDateString('en-GB', o); }
+
+/* ============ ENTRIES ============ */
+function lastBook(date) {
+  const ds = Object.keys(state.days).filter(d => d < date && state.days[d].book).sort();
+  return ds.length ? state.days[ds.at(-1)].book : '';
+}
+function newEntry(date) {
+  const f = fastInfo(date), w = SCHEDULE[parse(date).getDay()];
+  return {
+    date, updatedAt: 0, fasting: f.fast,
+    check: Object.fromEntries(CHECKS.map(([k]) => [k, false])),
+    meals: { ...(f.fast ? MEALS.fast : MEALS.normal) },
+    water: 0, workoutOut: w.out, workoutIn: w.in,
+    sleepHours: '', sleepQuality: 0, mood: 0, weight: '',
+    book: lastBook(date), pages: '', reflection: '', notes: '',
+    measure: {}, photo: null,
+  };
+}
+function entry(d) { return state.days[d] || (state.days[d] = newEntry(d)); }
+const count = e => e ? CHECKS.filter(([k]) => e.check[k]).length : 0;
+const complete = e => count(e) === CHECKS.length;
+
+function touch(e) {
+  e.updatedAt = Date.now();
+  dirty.add(e.date);
+  persist();
+  updateHeader();
+  scheduleSync();
+}
+function setField(path, val) {
+  const e = entry(cur);
+  const ks = path.split('.');
+  let o = e;
+  for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]] ??= {};
+  o[ks.at(-1)] = val;
+  touch(e);
+}
+
+/* ============ RENDER ============ */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ta = (f, label, val, ph = '') =>
+  `<label class="fld"><span>${label}</span><textarea data-f="${f}" rows="2" placeholder="${esc(ph)}">${esc(val)}</textarea></label>`;
+const inp = (f, label, val, type = 'text', ph = '') =>
+  `<label class="fld"><span>${label}</span><input data-f="${f}" type="${type}" ${type === 'number' ? 'data-t="num" inputmode="decimal" step="any"' : ''} value="${esc(val)}" placeholder="${esc(ph)}"></label>`;
+const rate = (k, label, val, icons) =>
+  `<div class="fld"><span class="muted">${label}</span><div class="rate">${icons.map((ic, i) =>
+    `<button data-act="rate" data-k="${k}" data-v="${i + 1}" class="${val === i + 1 ? 'on' : ''}" aria-label="${label} ${i + 1}">${ic}</button>`).join('')}</div></div>`;
+
+function render() {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.v === view));
+  const v = document.getElementById('view');
+  v.innerHTML = view === 'today' ? renderToday() : view === 'progress' ? renderProgress() : renderSettings();
+  updateHeader();
+}
+function safeRender() {
+  const a = document.activeElement;
+  if (a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type !== 'checkbox'))) { updateHeader(); return; }
+  render();
+}
+
+function firstMissed() {
+  const t = todayISO();
+  for (let d = state.startDate; d < t && dayNum(d) <= 75; d = addDays(d, 1)) {
+    if (!complete(state.days[d])) return d;
+  }
+  return null;
+}
+
+function renderToday() {
+  const e = entry(cur), n = dayNum(cur), f = fastInfo(cur), c = count(e);
+  const miss = cur === todayISO() ? firstMissed() : null;
+  const dlabel = n < 1 ? 'Starts ' + fmt(state.startDate) : n > 75 ? 'Finished 🎉' : `Day ${n}<small>/75</small>`;
+  const L = (e.water / 1000).toFixed(2);
+  const sunday = parse(cur).getDay() === 0 || Object.keys(e.measure || {}).length;
+  return `
+  ${miss ? `<div class="banner"><b>Day ${dayNum(miss)} (${fmt(miss)}) isn't complete.</b>
+    <div class="muted">75 Hard rule: if you miss anything, you restart at Day 1. If you did everything, finish logging that day.</div>
+    <div class="btns"><button class="btn" data-act="open" data-d="${miss}">Open that day</button><button class="btn" data-act="restart">Restart today</button></div></div>` : ''}
+  <div class="datebar">
+    <button data-act="prev" aria-label="Previous day">‹</button>
+    <div><div class="dnum">${dlabel}</div><div class="muted">${fmt(cur, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
+    <button data-act="next" aria-label="Next day" ${cur >= todayISO() ? 'disabled' : ''}>›</button>
+  </div>
+
+  <section class="card"><h2>Daily checklist <span class="pill ${c === 6 ? 'ok' : ''}">${c}/6</span></h2>
+    ${CHECKS.map(([k, l]) => `<label class="chk"><input type="checkbox" data-f="check.${k}" ${e.check[k] ? 'checked' : ''}><span>${l}</span></label>`).join('')}
+  </section>
+
+  <section class="card"><h2>Food
+    <label class="switch"><input type="checkbox" data-act="fast" ${e.fasting ? 'checked' : ''}>${e.fasting ? '🌱 Fasting' : '🍖 Non-fasting'}</label></h2>
+    <div class="muted">${f.label}</div>
+    ${ta('meals.breakfast', 'Breakfast', e.meals.breakfast)}
+    ${ta('meals.lunch', 'Lunch', e.meals.lunch)}
+    ${ta('meals.dinner', 'Dinner', e.meals.dinner)}
+    ${ta('meals.snacks', 'Snacks', e.meals.snacks)}
+  </section>
+
+  <section class="card"><h2>Water <span class="pill ${e.water >= 3750 ? 'ok' : ''}">${L} / 3.8 L</span></h2>
+    <div class="water">
+      <button data-act="water" data-d="-250">−</button>
+      <div class="bar"><i style="width:${Math.min(100, e.water / 37.85)}%"></i></div>
+      <button data-act="water" data-d="250">+250</button>
+      <button data-act="water" data-d="500">+500</button>
+    </div>
+  </section>
+
+  <section class="card"><h2>Workouts</h2>
+    ${ta('workoutOut', 'Outside (45 min)', e.workoutOut)}
+    ${ta('workoutIn', 'Inside (45 min) — write reps after each colon', e.workoutIn)}
+  </section>
+
+  <section class="card"><h2>Body &amp; sleep</h2>
+    <div class="row">${inp('weight', 'Weight (kg)', e.weight, 'number')}${inp('sleepHours', 'Sleep (hours)', e.sleepHours, 'number')}</div>
+    ${rate('sleepQuality', 'Sleep quality', e.sleepQuality, ['1', '2', '3', '4', '5'])}
+    ${rate('mood', 'Mood', e.mood, ['😞', '😕', '😐', '🙂', '😄'])}
+  </section>
+
+  ${sunday ? `<section class="card"><h2>Sunday measurements (cm)</h2>
+    <div class="row">${['waist', 'hips', 'chest', 'arm', 'thigh', 'neck'].map(k => inp('measure.' + k, k[0].toUpperCase() + k.slice(1), (e.measure || {})[k] ?? '', 'number')).join('')}</div>
+  </section>` : ''}
+
+  <section class="card"><h2>Reading</h2>
+    <div class="row">${inp('book', 'Book (nonfiction)', e.book)}${inp('pages', 'Pages', e.pages, 'text', 'e.g. 41–50')}</div>
+    ${ta('reflection', 'Reading reflection', e.reflection)}
+  </section>
+
+  <section class="card"><h2>My thoughts &amp; notes</h2>${ta('notes', '', e.notes, 'How did today go?')}</section>
+
+  <section class="card photo"><h2>Progress photo ${e.photo?.path ? '<span class="pill ok">on GitHub</span>' : hasPending(cur) ? '<span class="pill">waiting to upload</span>' : ''}</h2>
+    ${e.photo?.thumb ? `<img src="${e.photo.thumb}" alt="Progress photo for ${fmt(cur)}">` : ''}
+    <input type="file" id="photoIn" accept="image/*">
+  </section>
+
+  <button class="btn primary" data-act="sync">Save &amp; push to GitHub</button>`;
+}
+
+function renderProgress() {
+  const t = todayISO(), s = state.startDate;
+  let done = 0; const cells = [], weights = [];
+  for (let i = 1; i <= 75; i++) {
+    const d = addDays(s, i - 1), e = state.days[d];
+    let cls = d > t ? '' : !e || !e.updatedAt ? (d < t ? 'miss' : '') : complete(e) ? 'done' : 'part';
+    if (complete(e)) done++;
+    if (e && e.weight !== '' && e.weight != null && d <= t) weights.push([i, Number(e.weight)]);
+    cells.push(`<button class="${cls} ${d === t ? 'today' : ''}" data-act="open" data-d="${d}" ${d > t ? 'disabled' : ''}>${i}</button>`);
+  }
+  const nNow = Math.max(0, Math.min(75, dayNum(t)));
+  const w0 = weights[0]?.[1], w1 = weights.at(-1)?.[1];
+  const meas = Object.values(state.days).filter(e => e.measure && Object.values(e.measure).some(v => v !== '')).sort((a, b) => a.date < b.date ? -1 : 1);
+  return `
+  <section class="card"><div class="stats">
+    <div><b>${nNow}</b><span class="muted">day / 75</span></div>
+    <div><b>${done}</b><span class="muted">complete</span></div>
+    <div><b>${w0 != null && w1 != null ? (w1 - w0 > 0 ? '+' : '') + (w1 - w0).toFixed(1) : '–'}</b><span class="muted">kg change</span></div>
+  </div></section>
+  <section class="card"><h2>75 days <span class="muted">started ${fmt(s)}</span></h2><div class="grid">${cells.join('')}</div>
+    <p class="muted">Green = all 6 done · Yellow = partial · Red = not logged</p></section>
+  <section class="card"><h2>Weight</h2>${weightChart(weights)}</section>
+  ${meas.length ? `<section class="card"><h2>Measurements (cm)</h2><table><tr><th>Date</th><th>Waist</th><th>Hips</th><th>Chest</th><th>Arm</th><th>Thigh</th><th>Neck</th></tr>
+    ${meas.map(e => `<tr><td>${fmt(e.date, { day: 'numeric', month: 'short' })}</td>${['waist', 'hips', 'chest', 'arm', 'thigh', 'neck'].map(k => `<td>${esc(e.measure[k] ?? '')}</td>`).join('')}</tr>`).join('')}
+  </table></section>` : ''}`;
+}
+function weightChart(pts) {
+  if (pts.length < 2) return '<p class="muted">Log your weight on at least 2 days to see the trend.</p>';
+  const ys = pts.map(p => p[1]), lo = Math.floor(Math.min(...ys) - 0.5), hi = Math.ceil(Math.max(...ys) + 0.5);
+  const X = i => 24 + (i - 1) / 74 * 270, Y = v => 10 + (hi - v) / (hi - lo) * 95;
+  return `<svg viewBox="0 0 300 125" width="100%" role="img" aria-label="Weight trend">
+    <line x1="24" y1="105" x2="294" y2="105" stroke="currentColor" opacity=".15"/>
+    <text x="0" y="14">${hi}</text><text x="0" y="108">${lo}</text>
+    <text x="24" y="120">Day 1</text><text x="268" y="120">Day 75</text>
+    <polyline fill="none" stroke="#e4572e" stroke-width="2" stroke-linejoin="round" points="${pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ')}"/>
+    ${pts.map(p => `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="2.5" fill="#e4572e"><title>Day ${p[0]}: ${p[1]} kg</title></circle>`).join('')}
+  </svg>`;
+}
+
+function renderSettings() {
+  return `
+  <section class="card"><h2>GitHub</h2>
+    <label class="fld"><span>Owner</span><input type="text" data-s="owner" value="${esc(settings.owner)}" autocapitalize="off"></label>
+    <label class="fld"><span>Data repo (private)</span><input type="text" data-s="repo" value="${esc(settings.repo)}" autocapitalize="off"></label>
+    <label class="fld"><span>Branch</span><input type="text" data-s="branch" value="${esc(settings.branch)}" autocapitalize="off"></label>
+    <label class="fld"><span>Fine-grained token</span><input type="password" data-s="token" value="${esc(settings.token)}" autocomplete="off" placeholder="github_pat_…"></label>
+    <button class="btn" data-act="test">Test connection</button>
+    <button class="btn primary" data-act="sync">Sync now</button>
+    <p class="muted">The token is stored only in this browser on this device. Enter it once on your phone and once on your laptop.</p>
+  </section>
+  <section class="card"><h2>How to create the token</h2>
+    <ol class="muted">
+      <li>GitHub → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token.</li>
+      <li>Expiration: custom, e.g. <code>2027-03-01</code>.</li>
+      <li>Repository access: <b>Only select repositories</b> → <code>${esc(settings.repo || '75-hard-data')}</code>.</li>
+      <li>Permissions → Repository → <b>Contents: Read and write</b>.</li>
+      <li>Generate, copy, and paste it above.</li>
+    </ol>
+  </section>
+  <section class="card"><h2>Challenge</h2>
+    <label class="fld"><span>Day 1 date</span><input type="date" id="startIn" value="${state.startDate}"></label>
+    <button class="btn" data-act="restart">Restart from today</button>
+    <button class="btn" data-act="export">Download backup (JSON)</button>
+  </section>`;
+}
+
+function updateHeader() {
+  const el = document.getElementById('sync');
+  const pend = dirty.size + countPending() + (metaDirty ? 1 : 0);
+  el.textContent = !configured() ? '⚙ Set up GitHub'
+    : syncing ? '⟳ Syncing…'
+    : syncErr ? '⚠ ' + (syncErr === 'offline' ? 'Offline' : 'Sync error')
+    : pend ? `● ${pend} unsynced` : '✓ Synced';
+  el.title = syncErr || '';
+}
+
+/* ============ PHOTOS ============ */
+function shrink(file, max, q) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', q));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('could not read the image')); };
+    img.src = url;
+  });
+}
+async function addPhoto(file) {
+  try {
+    const full = await shrink(file, 1280, 0.8), thumb = await shrink(file, 240, 0.7);
+    if (!LS.set('h75.photo.' + cur, full)) return;
+    const e = entry(cur);
+    e.photo = { ...(e.photo || {}), thumb };
+    delete e.photo.path;
+    e.check.photo = true;
+    touch(e);
+    render();
+    scheduleSync(3000);
+  } catch (err) { toast('Photo failed: ' + err.message); }
+}
+function pendingPhotos() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('h75.photo.')) out.push({ date: k.slice(10), data: LS.get(k, '') });
+  }
+  return out.filter(p => p.data);
+}
+function hasPending(d) { try { return !!localStorage.getItem('h75.photo.' + d); } catch { return false; } }
+function countPending() { try { let n = 0; for (let i = 0; i < localStorage.length; i++) if (localStorage.key(i)?.startsWith('h75.photo.')) n++; return n; } catch { return 0; } }
+
+/* ============ GITHUB SYNC ============ */
+async function api(path, { method = 'GET', body, raw } = {}) {
+  const r = await fetch(`https://api.github.com/repos/${settings.owner}/${settings.repo}${path}`, {
+    method, cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (raw && r.status === 404) return null;
+  if (!r.ok) {
+    let m = ''; try { m = (await r.json()).message; } catch {}
+    const err = new Error(`${r.status} ${m}`.trim()); err.status = r.status; throw err;
+  }
+  return raw ? r.text() : r.json();
+}
+
+function exportJSON() {
+  const days = Object.fromEntries(Object.entries(state.days).filter(([, e]) => e.updatedAt));
+  return JSON.stringify({ startDate: state.startDate, startSetAt: state.startSetAt, days },
+    (k, v) => k === 'thumb' ? undefined : v, 1);
+}
+
+async function pull() {
+  const txt = await api(`/contents/data.json?ref=${encodeURIComponent(settings.branch)}`, { raw: true });
+  if (!txt) return;
+  const remote = JSON.parse(txt);
+  if ((remote.startSetAt || 0) > (state.startSetAt || 0)) { state.startDate = remote.startDate; state.startSetAt = remote.startSetAt; }
+  for (const [d, re] of Object.entries(remote.days || {})) {
+    const le = state.days[d];
+    if (!le || (re.updatedAt || 0) > (le.updatedAt || 0)) {
+      const thumb = le?.photo?.thumb;
+      if (thumb && re.photo) re.photo.thumb = thumb;
+      state.days[d] = re;
+      dirty.delete(d);
+    }
+  }
+  persist();
+}
+
+function dayMd(e) {
+  const n = dayNum(e.date), m = e.measure || {};
+  const lines = [
+    `# Day ${n} — ${fmt(e.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`,
+    `${e.fasting ? '🌱 Fasting' : '🍖 Non-fasting'} · ${count(e)}/6 ${complete(e) ? '✅' : ''}`, '',
+    '## Checklist', ...CHECKS.map(([k, l]) => `- [${e.check[k] ? 'x' : ' '}] ${l}`), '',
+    '## Food', `- **Breakfast:** ${e.meals.breakfast}`, `- **Lunch:** ${e.meals.lunch}`, `- **Dinner:** ${e.meals.dinner}`, `- **Snacks:** ${e.meals.snacks}`,
+    `- **Water:** ${(e.water / 1000).toFixed(2)} L`, '',
+    '## Workout (outside)', '```', e.workoutOut, '```', '## Workout (inside)', '```', e.workoutIn, '```', '',
+    '## Body & sleep', `- Weight: ${e.weight || '–'} kg`, `- Sleep: ${e.sleepHours || '–'} h · quality ${e.sleepQuality || '–'}/5`, `- Mood: ${e.mood || '–'}/5`,
+  ];
+  if (Object.values(m).some(v => v !== '')) lines.push('', '## Measurements (cm)', ...Object.entries(m).filter(([, v]) => v !== '').map(([k, v]) => `- ${k}: ${v}`));
+  lines.push('', `## Reading — ${e.book || '–'} (${e.pages || '–'})`, e.reflection || '', '', '## Thoughts & notes', e.notes || '');
+  if (e.photo?.path) lines.push('', `![Day ${n}](../${e.photo.path})`);
+  return lines.join('\n') + '\n';
+}
+function readmeMd() {
+  const t = todayISO(), rows = [];
+  let done = 0;
+  for (let i = 1; i <= 75; i++) {
+    const d = addDays(state.startDate, i - 1); if (d > t) break;
+    const e = state.days[d];
+    if (complete(e)) done++;
+    rows.push(e && e.updatedAt
+      ? `| [${i}](days/${d}.md) | ${fmt(d)} | ${complete(e) ? '✅' : count(e) + '/6'} | ${e.weight || ''} | ${(e.water / 1000).toFixed(1)} L | ${e.fasting ? '🌱' : ''} |`
+      : `| ${i} | ${fmt(d)} | ❌ not logged | | | |`);
+  }
+  return [`# 75 Hard — progress`, '', `Day 1: ${fmt(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })} · Completed days: **${done}/75**`, '',
+    '| Day | Date | Done | Weight | Water | Fast |', '|---|---|---|---|---|---|', ...rows, ''].join('\n');
+}
+function commitMsg(dates) {
+  if (dates.length === 1) { const e = state.days[dates[0]]; return `Day ${dayNum(e.date)} ${complete(e) ? '✅' : count(e) + '/6'} — ${fmt(e.date)}`; }
+  if (dates.length) return `Update ${dates.length} days`;
+  return 'Update challenge start date';
+}
+
+async function push() {
+  const started = Date.now(), br = encodeURIComponent(settings.branch);
+  const ref = await api(`/git/ref/heads/${br}`);
+  const base = ref.object.sha;
+  const baseCommit = await api(`/git/commits/${base}`);
+  const dates = [...dirty], tree = [];
+  const photos = pendingPhotos();
+  for (const p of photos) {
+    const b = await api('/git/blobs', { method: 'POST', body: { content: p.data.split(',')[1], encoding: 'base64' } });
+    tree.push({ path: `photos/${p.date}.jpg`, mode: '100644', type: 'blob', sha: b.sha });
+    const e = state.days[p.date];
+    if (e) { e.photo = { ...(e.photo || {}), path: `photos/${p.date}.jpg` }; if (!dates.includes(p.date)) dates.push(p.date); }
+  }
+  for (const d of dates) if (state.days[d]) tree.push({ path: `days/${d}.md`, mode: '100644', type: 'blob', content: dayMd(state.days[d]) });
+  tree.push({ path: 'data.json', mode: '100644', type: 'blob', content: exportJSON() });
+  tree.push({ path: 'README.md', mode: '100644', type: 'blob', content: readmeMd() });
+  const t = await api('/git/trees', { method: 'POST', body: { base_tree: baseCommit.tree.sha, tree } });
+  const c = await api('/git/commits', { method: 'POST', body: { message: commitMsg(dates), tree: t.sha, parents: [base] } });
+  await api(`/git/refs/heads/${br}`, { method: 'PATCH', body: { sha: c.sha } });
+  for (const p of photos) LS.del('h75.photo.' + p.date);
+  for (const d of dates) if ((state.days[d]?.updatedAt || 0) <= started) dirty.delete(d);
+  metaDirty = false;
+  persist();
+}
+
+function scheduleSync(ms = 20000) {
+  clearTimeout(syncTimer);
+  if (configured()) syncTimer = setTimeout(() => sync(false), ms);
+}
+async function sync(manual) {
+  if (!configured()) { if (manual) { toast('Add your GitHub token in Settings first'); view = 'settings'; render(); } return; }
+  if (syncing) return;
+  if (!navigator.onLine) { syncErr = 'offline'; updateHeader(); if (manual) toast('Offline — saved on this device, will push later'); return; }
+  clearTimeout(syncTimer);
+  syncing = true; syncErr = ''; updateHeader();
+  try {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await pull();
+        if (dirty.size || metaDirty || countPending()) await push();
+        break;
+      } catch (e) { if ((e.status === 422 || e.status === 409) && attempt < 2) continue; throw e; }
+    }
+    if (manual) toast('Pushed to GitHub ✓');
+  } catch (e) {
+    syncErr = e.message; console.error(e);
+    if (manual) toast('Sync failed: ' + e.message);
+  } finally { syncing = false; safeRender(); }
+}
+
+/* ============ EVENTS ============ */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2800);
+}
+const actions = {
+  go: b => { view = b.dataset.v; if (view === 'today') cur = todayISO(); render(); window.scrollTo(0, 0); },
+  prev: () => { cur = addDays(cur, -1); render(); },
+  next: () => { if (cur < todayISO()) { cur = addDays(cur, 1); render(); } },
+  open: b => { cur = b.dataset.d; view = 'today'; render(); window.scrollTo(0, 0); },
+  water: b => {
+    const e = entry(cur);
+    e.water = Math.max(0, e.water + Number(b.dataset.d));
+    e.check.water = e.water >= 3750;
+    touch(e); render();
+  },
+  rate: b => { const e = entry(cur), v = Number(b.dataset.v); e[b.dataset.k] = e[b.dataset.k] === v ? 0 : v; touch(e); render(); },
+  sync: () => sync(true),
+  test: async () => {
+    if (!configured()) return toast('Fill in owner, repo and token first');
+    try { const r = await api(''); toast(`Connected to ${r.full_name} (${r.private ? 'private' : 'PUBLIC'}) ✓`); }
+    catch (e) { toast('Connection failed: ' + e.message); }
+  },
+  restart: () => {
+    if (!confirm('Restart the challenge with today as Day 1? Your old logs stay in the repo.')) return;
+    state.startDate = todayISO(); state.startSetAt = Date.now(); metaDirty = true;
+    persist(); cur = todayISO(); view = 'today'; render(); scheduleSync(2000);
+  },
+  export: () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([exportJSON()], { type: 'application/json' }));
+    a.download = `75-hard-backup-${todayISO()}.json`; a.click();
+  },
+};
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-act]');
+  if (!b || b.tagName === 'INPUT') return;
+  actions[b.dataset.act]?.(b);
+});
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (t.dataset.f && t.type !== 'checkbox') setField(t.dataset.f, t.dataset.t === 'num' ? (t.value === '' ? '' : Number(t.value)) : t.value);
+});
+document.addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.type === 'checkbox' && t.dataset.f) { setField(t.dataset.f, t.checked); render(); }
+  else if (t.dataset.act === 'fast') {
+    const e = entry(cur), from = t.checked ? MEALS.normal : MEALS.fast;
+    if (JSON.stringify(e.meals) === JSON.stringify(from)) e.meals = { ...(t.checked ? MEALS.fast : MEALS.normal) };
+    e.fasting = t.checked; touch(e); render();
+  }
+  else if (t.id === 'photoIn' && t.files[0]) addPhoto(t.files[0]);
+  else if (t.id === 'startIn' && t.value) {
+    state.startDate = t.value; state.startSetAt = Date.now(); metaDirty = true; persist(); scheduleSync(2000); updateHeader();
+  }
+  else if (t.dataset.s) { settings[t.dataset.s] = t.value.trim(); LS.set('h75.settings', settings); updateHeader(); }
+});
+window.addEventListener('online', () => sync(false));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && (dirty.size || countPending())) sync(false);
+  if (document.visibilityState === 'visible') sync(false);
+});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+render();
+sync(false);
+</script>
+</body>
+</html>
