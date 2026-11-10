@@ -71,6 +71,10 @@ main{max-width:560px;margin:0 auto;padding:4px 16px 16px}
 .tile svg.i{width:24px;height:24px}
 .tile.on{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
 .tile.on::after{content:"";position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/10px no-repeat}
+.bikerow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px;margin:12px 0 0;box-shadow:var(--shadow)}
+.tog{width:46px;height:28px;border-radius:99px;background:var(--line);position:relative;flex:none;transition:.2s}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.bikerow.on .tog{background:var(--ok)} .bikerow.on .tog::after{left:21px}
 .today-link{display:block;margin:10px auto 0;background:none;border:0;color:var(--accent);font-weight:600;font-size:14px}
 
 /* banner */
@@ -202,6 +206,7 @@ const ic = n => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n
 /* ================= TEMPLATES ================= */
 const DEFAULT_START = '2026-11-11';
 const DEFAULTS = { owner: 'esperu4', repo: '75-hard-data', branch: 'main', token: '' };
+const VAPID_PUBLIC = 'BG4kAxWpYb_w7M-QyuCC4AcktrihMmowXLrwNAkqS8_KMCbAvuPLIMhoEomiMNDuzyM80bdmwbBniXto02eYiJE';
 
 const CHECKS = [
   ['diet', 'Diet', 'diet', 'Follow the diet'],
@@ -286,7 +291,7 @@ function newEntry(date) {
     inside: { notes: '', done: false },
     sleepHours: '', sleepQuality: 0, mood: 0, weight: '',
     book: lastBook(date), pages: '', reflection: '', notes: '',
-    measure: {}, photo: null,
+    measure: {}, photo: null, bikeTomorrow: false,
   };
 }
 function entry(d) {
@@ -393,6 +398,12 @@ function renderToday() {
     ${cur !== t ? `<button class="today-link" data-act="jump">Back to today →</button>` : ''}
   </section>
 
+  <button class="bikerow ${e.bikeTomorrow ? 'on' : ''}" data-act="bike" aria-pressed="${!!e.bikeTomorrow}">
+    <span class="sicon">${ic('bike')}</span>
+    <span class="stitle">Biking tomorrow?<small>${e.bikeTomorrow ? (pushOn() ? `Checklist reminder ${fmt(addDays(cur, 1), { weekday: 'short' })} ~5:45` : 'Turn on reminders in Settings') : 'Get the ride checklist at ~5:45'}</small></span>
+    <span class="tog"></span>
+  </button>
+
   ${sec('water', 'drop', 'blue', 'Water', `${glasses} glasses · goal 15 × 250 ml`, `<span class="pill ${e.water >= 3750 ? 'ok' : ''}">${(e.water / 1000).toFixed(2)} L</span>`, `
     <div class="wtop"><b>${(e.water / 1000).toFixed(2)}</b><span class="muted">/ 3.8 L · tap a drop to set</span></div>
     <div class="drops">${Array.from({ length: 16 }, (_, i) => `<button class="drop ${i < glasses ? 'on' : ''}" data-act="drop" data-i="${i + 1}" aria-label="${(i + 1) * 250} ml"><svg viewBox="0 0 24 24">${ICONS.drop}</svg></button>`).join('')}</div>
@@ -498,6 +509,10 @@ function renderSettings() {
       <li>Generate, copy, paste above</li>
     </ol>
   </section>
+  <section class="card"><h2>Ride reminders</h2>
+    <p class="muted" style="margin:0 0 4px">On mornings after you switch on “Biking tomorrow”, this phone gets your ride checklist at about 5:45.</p>
+    <button class="btn ${pushOn() ? 'done' : 'primary'}" data-act="push">${pushOn() ? ic('check') + 'Reminders on for this device' : 'Turn on reminders'}</button>
+  </section>
   <section class="card"><h2>Challenge</h2>
     <label class="fld"><span>Day 1 date</span><input type="date" id="startIn" value="${state.startDate}"></label>
     <div class="row" style="margin-top:12px"><button class="btn sm" data-act="restart">Restart today</button><button class="btn sm" data-act="export">Backup (JSON)</button></div>
@@ -599,6 +614,7 @@ function dayMd(e) {
   L.push(`## Workout — outside ${e.out?.done ? '✅' : '❌'}`, e.out?.notes || '–');
   if (e.out?.route) L.push(`[Route (GPX)](../${e.out.route})`);
   L.push('', `## Workout — inside ${e.inside?.done ? '✅' : '❌'}`, e.inside?.notes || '–', '');
+  if (e.bikeTomorrow) L.push('🚴 Biking tomorrow — reminder set', '');
   L.push('## Body & sleep', `- Weight: ${e.weight || '–'} kg`, `- Sleep: ${e.sleepHours || '–'} h · quality ${e.sleepQuality || '–'}/5`, `- Mood: ${e.mood || '–'}/5`);
   if (Object.values(m).some(v => v !== '')) L.push('', '## Measurements (cm)', ...Object.entries(m).filter(([, v]) => v !== '').map(([k, v]) => `- ${k}: ${v}`));
   L.push('', `## Reading — ${e.book || '–'} (${e.pages || '–'})`, e.reflection || '', '', '## Thoughts & notes', e.notes || '');
@@ -659,6 +675,32 @@ async function sync(manual) {
   finally { syncing = false; safeRender(); }
 }
 
+/* ================= RIDE REMINDERS (Web Push, sent by a GitHub Action in the data repo) ================= */
+const pushOn = () => !!LS.get('h75.push', '') && typeof Notification !== 'undefined' && Notification.permission === 'granted';
+const b64uBytes = s => { const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+const b64enc = s => btoa(unescape(encodeURIComponent(s)));
+const b64dec = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
+async function enablePush() {
+  if (!configured()) return toast('Connect GitHub first (token above)');
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return toast('This browser can’t receive push notifications');
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') return toast('Notifications are blocked — allow them for this site in Chrome settings');
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uBytes(VAPID_PUBLIC) });
+    const json = sub.toJSON();
+    let list = [], sha;
+    try { const r = await api(`/contents/push/subscriptions.json?ref=${encodeURIComponent(settings.branch)}`); sha = r.sha; list = JSON.parse(b64dec(r.content)); }
+    catch (e) { if (e.status !== 404) throw e; }
+    list = list.filter(s => s.endpoint !== json.endpoint);
+    list.push({ ...json, device: /Android/.test(navigator.userAgent) ? 'Android phone' : /iPhone|iPad/.test(navigator.userAgent) ? 'iPhone' : 'Computer', added: new Date().toISOString() });
+    await api('/contents/push/subscriptions.json', { method: 'PUT', body: { message: 'Turn on ride reminders', content: b64enc(JSON.stringify(list, null, 1)), branch: settings.branch, ...(sha ? { sha } : {}) } });
+    LS.set('h75.push', json.endpoint);
+    toast('Reminders on ✓ — a confirmation notification will arrive in ~1 min');
+    render();
+  } catch (e) { toast('Couldn’t turn on reminders: ' + e.message); }
+}
+
 /* ================= EVENTS ================= */
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -689,6 +731,8 @@ const actions = {
     e.fasting = on; touch(e); render();
   },
   sync: () => sync(true),
+  bike: () => { const e = entry(cur); e.bikeTomorrow = !e.bikeTomorrow; vibrate(); touch(e); render(); scheduleSync(3000); },
+  push: () => enablePush(),
   test: async () => {
     if (!configured()) return toast('Fill in owner, repo and token first');
     try { const r = await api(''); toast(`Connected to ${r.full_name} (${r.private ? 'private' : 'PUBLIC!'}) ✓`); }
