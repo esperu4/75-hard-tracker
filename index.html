@@ -292,6 +292,9 @@ function newEntry(date) {
 function entry(d) {
   const e = state.days[d] || (state.days[d] = newEntry(d));
   // fill anything missing (older format, or an entry created outside the app, e.g. a ride logged from Strava)
+  // drop leftovers from earlier app versions (per-set workout tracking)
+  delete e.workoutOut; delete e.workoutIn;
+  if (e.inside) { delete e.inside.ex; delete e.inside.key; delete e.inside.name; }
   const n = newEntry(d);
   for (const k of Object.keys(n)) {
     if (e[k] === undefined || e[k] === null && n[k] !== null) e[k] = n[k];
@@ -562,9 +565,10 @@ async function api(path, { method = 'GET', body, raw } = {}) {
   if (!r.ok) { let m = ''; try { m = (await r.json()).message; } catch {} const err = new Error(`${r.status} ${m}`.trim()); err.status = r.status; throw err; }
   return raw ? r.text() : r.json();
 }
+const DROP = new Set(['thumb', 'needsRender', 'workoutOut', 'workoutIn', 'ex', 'key', 'name']); // local-only or legacy fields
 function exportJSON() {
   const days = Object.fromEntries(Object.entries(state.days).filter(([, e]) => e.updatedAt));
-  return JSON.stringify({ startDate: state.startDate, startSetAt: state.startSetAt, days }, (k, v) => k === 'thumb' ? undefined : v, 1);
+  return JSON.stringify({ startDate: state.startDate, startSetAt: state.startSetAt, days }, (k, v) => DROP.has(k) ? undefined : v, 1);
 }
 async function pull() {
   const txt = await api(`/contents/data.json?ref=${encodeURIComponent(settings.branch)}`, { raw: true });

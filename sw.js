@@ -1,5 +1,5 @@
 // Offline support: network-first for the app files, cache as fallback.
-const CACHE = 'h75-v2';
+const CACHE = 'h75-v3';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg'];
 
 self.addEventListener('install', e => {
