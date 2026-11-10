@@ -3,7 +3,7 @@
 A tiny, no-build web app for logging the 75 Hard challenge, one journal page per day. Each save is committed to a **private** GitHub repo.
 
 - Daily checklist: diet, no alcohol or cheat meals, two 45-minute workouts, 1 gallon of water, progress photo, 10 pages of reading
-- Meals (pre-filled with fasting and non-fasting templates), water counter, outside and inside workouts (pre-filled from the weekly plan), sleep, mood, weight, reading reflection, notes, progress photo, Sunday measurements
+- Meals (pre-filled with fasting and non-fasting templates), water counter, outside and inside workouts (a note + done each; training detail lives in Calisteniapp, Strava rides can be added with `tools/log-ride.mjs`), sleep, mood, weight, reading reflection, notes, progress photo, Sunday measurements
 - Progress view: a 75-day grid, weight trend, measurements table
 - Works offline. Changes are saved on the device and pushed when you're back online.
 
