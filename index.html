@@ -118,19 +118,9 @@ textarea{resize:none;field-sizing:content;min-height:46px}
 .wq button{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--field);font-weight:700;font-size:14px}
 
 /* workouts */
-.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.seg button{padding:8px 12px;border-radius:99px;border:1px solid var(--line);background:var(--field);font-size:14px;font-weight:600}
-.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .wk{border-top:1px solid var(--line);margin-top:14px;padding-top:14px}
 .wk:first-child{border:0;margin:0;padding:0}
 .wkh{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700}
-.ex{padding:10px 0;border-bottom:1px dashed var(--line)}
-.ex:last-child{border-bottom:0}
-.exn{font-size:14px;font-weight:600}
-.exn small{color:var(--muted);font-weight:500;margin-left:6px}
-.sets{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
-.sets input{width:54px;text-align:center;padding:8px 4px;font-weight:700}
-.sets input:not(:placeholder-shown){background:var(--ok-soft);border-color:var(--ok)}
 
 /* meals */
 .meal{display:flex;gap:10px;align-items:flex-start;margin-top:10px}
@@ -222,38 +212,11 @@ const CHECKS = [
   ['reading', 'Read 10 pages', 'book', 'Read 10 pages of nonfiction'],
 ];
 
-const SESSIONS = {
-  lowerA: { name: 'Lower A', ex: [
-    ['Goblet squat 8 kg · 3s down + pause', '4×12–20'], ['Bulgarian split squat (stair)', '3×8–12/leg'],
-    ['Single-leg RDL 8 kg', '3×10–12/leg'], ['Nordic curl negative', '3×3–6'],
-    ['Single-leg calf raise + DB', '3×15–20'], ['Dead bug', '3×10/side']] },
-  upperA: { name: 'Upper A · push', ex: [
-    ['Push-ups', '4×near failure'], ['Inverted row under table', '4×8–15'],
-    ['Single-arm overhead press', '3×8–12/arm'], ['Dips (stair / table edge)', '3×10–15'],
-    ['Single-arm DB row', '3×12–15/arm'], ['Hammer curl 7+8 kg', '2×12–15'], ['Plank (sec)', '2×45–60s']] },
-  lowerB: { name: 'Lower B', ex: [
-    ['Step-up (high stair) + DBs', '3×10/leg'], ['Two-DB RDL 15 kg · 3s down', '4×12–15'],
-    ['Cossack squat 8 kg', '3×6–8/side'], ['Reverse lunge + DBs', '3×10/leg'],
-    ['Single-leg glute bridge + DB', '3×12–15/leg'], ['Side plank (sec)', '3×30–45s']] },
-  upperB: { name: 'Upper B · pull', ex: [
-    ['Inverted row under table', '4×8–15'], ['DB pullover 8 kg', '3×12–15'],
-    ['Floor press 7+8 kg · slow down', '4×12–20'], ['Renegade row', '3×6–8/side'],
-    ['Pike push-up (feet on stair)', '3×6–12'], ['Rear-delt fly 7 kg', '3×15']] },
-  recovery: { name: 'Recovery', ex: [
-    ['Core circuit: dead bug · bird dog · side plank · bridge · hollow', '3 rounds'],
-    ['Mobility: hips, hamstrings, calves, T-spine', '1×20 min'], ['Ladder / grid technique', '1×10 min']] },
-  ladder: { name: 'Ladder + DB conditioning', ex: [
-    ['Warm-up: ladder drills 1–3', '1×8 min'], ['Block A: drill → 10 push-ups → drill → 15 squats', '6 rounds'],
-    ['Block B 40/20: thrusters · renegade · jump squat · climbers · sit-ups', '4 rounds'],
-    ['Grid X hops', '3×30s'], ['Stretch', '1×5 min']] },
-  mobility: { name: 'Mobility + core', ex: [
-    ['Core circuit: dead bug · bird dog · side plank · bridge · hollow', '3 rounds'],
-    ['Mobility: hips, hamstrings, calves, T-spine', '1×20 min']] },
-};
-const OUT_TYPES = ['Bike', 'Walk', 'Ladder', 'Hike', 'Run'];
-const SCHEDULE = { // getDay(): 0=Sun
-  1: ['Bike', 'lowerA'], 2: ['Ladder', 'upperA'], 3: ['Bike', 'recovery'], 4: ['Bike', 'lowerB'],
-  5: ['Bike', 'upperB'], 6: ['Bike', 'ladder'], 0: ['Walk', 'mobility'],
+// Weekly plan, shown only as a hint in the workout fields. getDay(): 0=Sun
+const PLAN = {
+  1: ['Bike ride', 'Lower A'], 2: ['Ladder or brisk walk', 'Upper A'], 3: ['Bike ride', 'Recovery'],
+  4: ['Bike ride', 'Lower B'], 5: ['Bike ride', 'Upper B'], 6: ['Long ride or walk', 'Ladder circuit'],
+  0: ['Walk', 'Mobility + core'],
 };
 const MEALS = {
   fast: {
@@ -278,11 +241,6 @@ function fastInfo(d) {
   if (dow === 3) return { fast: true, label: 'Wednesday fast' };
   if (dow === 5) return { fast: true, label: 'Friday fast' };
   return { fast: false, label: 'Non-fasting' };
-}
-const setCount = t => { const m = /^(\d+)\s*(×|x|rounds?)/i.exec(t); return m ? Math.min(+m[1], 8) : 1; };
-function sessionFrom(key) {
-  const s = SESSIONS[key];
-  return { key, name: s.name, done: false, notes: '', ex: s.ex.map(([n, t]) => ({ n, t, s: Array(setCount(t)).fill('') })) };
 }
 
 /* ================= STORAGE ================= */
@@ -318,14 +276,14 @@ function lastBook(date) {
   return ds.length ? state.days[ds.at(-1)].book : '';
 }
 function newEntry(date) {
-  const f = fastInfo(date), [ot, sk] = SCHEDULE[parse(date).getDay()];
+  const f = fastInfo(date);
   return {
     date, updatedAt: 0, fasting: f.fast,
     check: Object.fromEntries(CHECKS.map(([k]) => [k, false])),
     meals: { ...(f.fast ? MEALS.fast : MEALS.normal) },
     water: 0,
-    out: { type: ot, min: '', km: '', notes: '', done: false },
-    inside: sessionFrom(sk),
+    out: { notes: '', done: false },
+    inside: { notes: '', done: false },
     sleepHours: '', sleepQuality: 0, mood: 0, weight: '',
     book: lastBook(date), pages: '', reflection: '', notes: '',
     measure: {}, photo: null,
@@ -404,8 +362,7 @@ function renderToday() {
     : n > 75 ? `<div class="dayno">Done 🎉</div><div class="dsub">75/75</div>`
     : `<div class="dayno">Day ${n}<small> / 75</small></div><div class="dsub">${fmt(cur, { weekday: 'long', day: 'numeric', month: 'short' })}</div>`;
   const glasses = Math.round(e.water / 250);
-  const setsDone = e.inside.ex.reduce((a, x) => a + x.s.filter(v => String(v).trim()).length, 0);
-  const setsAll = e.inside.ex.reduce((a, x) => a + x.s.length, 0);
+  const [planOut, planIn] = PLAN[parse(cur).getDay()];
   const sunday = parse(cur).getDay() === 0 || Object.values(e.measure || {}).some(v => v !== '');
   const doneBtn = (w, on) => `<button class="btn sm ${on ? 'done' : ''}" style="width:auto;padding:8px 14px" data-act="wdone" data-w="${w}">${on ? ic('check') + 'Done' : 'Mark done'}</button>`;
 
@@ -425,7 +382,6 @@ function renderToday() {
     </div>
     <div class="badges">
       <span class="badge ${f.feast ? 'feast' : e.fasting ? 'fast' : ''}">${e.fasting ? '🌱 ' : ''}${f.label}</span>
-      <span class="badge">${esc(e.inside.name)}</span>
     </div>
     <div class="tiles">
       ${CHECKS.map(([k, short, icon]) => `<button class="tile ${e.check[k] ? 'on' : ''}" data-act="tile" data-k="${k}" aria-pressed="${!!e.check[k]}">${ic(icon)}${short}</button>`).join('')}
@@ -439,20 +395,15 @@ function renderToday() {
     <div class="drops">${Array.from({ length: 16 }, (_, i) => `<button class="drop ${i < glasses ? 'on' : ''}" data-act="drop" data-i="${i + 1}" aria-label="${(i + 1) * 250} ml"><svg viewBox="0 0 24 24">${ICONS.drop}</svg></button>`).join('')}</div>
     <div class="wq"><button data-act="water" data-d="-250">− 250</button><button data-act="water" data-d="250">+ 250</button><button data-act="water" data-d="500">+ 500</button><button data-act="water" data-d="1000">+ 1 L</button></div>`)}
 
-  ${sec('workouts', 'dumbbell', '', 'Workouts', `${e.out.type}${e.out.min ? ' ' + e.out.min + ' min' : ''} · ${e.inside.name} ${setsDone}/${setsAll} sets`,
+  ${sec('workouts', 'dumbbell', '', 'Workouts', `${e.out.done ? '✓' : '○'} Outside · ${e.inside.done ? '✓' : '○'} Inside`,
     `<span class="pill ${e.out.done && e.inside.done ? 'ok' : ''}">${(e.out.done ? 1 : 0) + (e.inside.done ? 1 : 0)}/2</span>`, `
     <div class="wk">
       <div class="wkh"><span>🌤 Outside · 45 min</span>${doneBtn('out', e.out.done)}</div>
-      <div class="seg">${OUT_TYPES.map(x => `<button class="${e.out.type === x ? 'on' : ''}" data-act="otype" data-v="${x}">${x}</button>`).join('')}</div>
-      <div class="row">${inp('out.min', 'Minutes', e.out.min, 'number', '45')}${inp('out.km', 'Distance (km)', e.out.km, 'number', '–')}</div>
-      ${ta('out.notes', e.out.notes, 'Route, how it felt…')}
+      ${ta('out.notes', e.out.notes, `Planned: ${planOut}`)}
     </div>
     <div class="wk">
       <div class="wkh"><span>🏠 Inside · 45 min</span>${doneBtn('inside', e.inside.done)}</div>
-      <label class="fld"><span>Session</span><select id="sessSel">${Object.entries(SESSIONS).map(([k, s]) => `<option value="${k}" ${e.inside.key === k ? 'selected' : ''}>${s.name}</option>`).join('')}</select></label>
-      ${e.inside.ex.map((x, i) => `<div class="ex"><div class="exn">${esc(x.n)}<small>${esc(x.t)}</small></div>
-        <div class="sets">${x.s.map((v, j) => `<input type="text" inputmode="numeric" data-f="inside.ex.${i}.s.${j}" value="${esc(v)}" placeholder="${/round|min/.test(x.t) ? '✓' : 'set ' + (j + 1)}" aria-label="${esc(x.n)} set ${j + 1}">`).join('')}</div></div>`).join('')}
-      ${ta('inside.notes', e.inside.notes, 'Weight used, what felt hard, what to progress next time…')}
+      ${ta('inside.notes', e.inside.notes, `Planned: ${planIn} (Calisteniapp)`)}
     </div>`)}
 
   ${sec('food', 'food', 'green', 'Food', e.fasting ? 'Fasting template · edit what changed' : 'Non-fasting template · edit what changed',
@@ -641,10 +592,9 @@ function dayMd(e) {
     '## Food', `- **Breakfast:** ${e.meals.breakfast}`, `- **Lunch:** ${e.meals.lunch}`, `- **Dinner:** ${e.meals.dinner}`, `- **Snacks:** ${e.meals.snacks}`,
     `- **Water:** ${(e.water / 1000).toFixed(2)} L`, '',
   ];
-  if (e.out) L.push(`## Workout — outside ${e.out.done ? '✅' : ''}`, `${e.out.type} · ${e.out.min || '–'} min · ${e.out.km || '–'} km${e.out.route ? ` · [route (GPX)](../${e.out.route})` : ''}`, e.out.notes || '', '');
-  if (e.inside) L.push(`## Workout — inside: ${e.inside.name} ${e.inside.done ? '✅' : ''}`, '| Exercise | Target | Sets |', '|---|---|---|',
-    ...e.inside.ex.map(x => `| ${x.n} | ${x.t} | ${x.s.map(v => v || '·').join(' / ')} |`), '', e.inside.notes || '', '');
-  if (e.workoutOut || e.workoutIn) L.push('## Workouts', '```', e.workoutOut || '', e.workoutIn || '', '```', '');
+  L.push(`## Workout — outside ${e.out?.done ? '✅' : '❌'}`, e.out?.notes || '–');
+  if (e.out?.route) L.push(`[Route (GPX)](../${e.out.route})`);
+  L.push('', `## Workout — inside ${e.inside?.done ? '✅' : '❌'}`, e.inside?.notes || '–', '');
   L.push('## Body & sleep', `- Weight: ${e.weight || '–'} kg`, `- Sleep: ${e.sleepHours || '–'} h · quality ${e.sleepQuality || '–'}/5`, `- Mood: ${e.mood || '–'}/5`);
   if (Object.values(m).some(v => v !== '')) L.push('', '## Measurements (cm)', ...Object.entries(m).filter(([, v]) => v !== '').map(([k, v]) => `- ${k}: ${v}`));
   L.push('', `## Reading — ${e.book || '–'} (${e.pages || '–'})`, e.reflection || '', '', '## Thoughts & notes', e.notes || '');
@@ -657,11 +607,11 @@ function readmeMd() {
     const d = addDays(state.startDate, i - 1); if (d > t) break;
     const e = state.days[d]; if (complete(e)) done++;
     rows.push(e && e.updatedAt
-      ? `| [${i}](days/${d}.md) | ${fmt(d)} | ${complete(e) ? '✅' : count(e) + '/6'} | ${e.weight || ''} | ${(e.water / 1000).toFixed(1)} L | ${e.inside ? e.inside.name : ''} | ${e.fasting ? '🌱' : ''} |`
+      ? `| [${i}](days/${d}.md) | ${fmt(d)} | ${complete(e) ? '✅' : count(e) + '/6'} | ${e.weight || ''} | ${(e.water / 1000).toFixed(1)} L | ${e.out?.km ? e.out.km + ' km' : ''} | ${e.fasting ? '🌱' : ''} |`
       : `| ${i} | ${fmt(d)} | ❌ not logged | | | | |`);
   }
   return [`# 75 Hard — progress`, '', `Day 1: ${fmt(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })} · Completed days: **${done}/75**`, '',
-    '| Day | Date | Done | Weight | Water | Session | Fast |', '|---|---|---|---|---|---|---|', ...rows, ''].join('\n');
+    '| Day | Date | Done | Weight | Water | Ride | Fast |', '|---|---|---|---|---|---|---|', ...rows, ''].join('\n');
 }
 function commitMsg(dates) {
   if (dates.length === 1) { const e = state.days[dates[0]]; return `Day ${dayNum(e.date)} ${complete(e) ? '✅' : count(e) + '/6'} — ${fmt(e.date)}`; }
@@ -722,7 +672,6 @@ const actions = {
   water: b => { const e = entry(cur); setWater(e, e.water + Number(b.dataset.d)); vibrate(); },
   drop: b => { const e = entry(cur), i = Number(b.dataset.i); setWater(e, Math.round(e.water / 250) === i ? (i - 1) * 250 : i * 250); vibrate(); },
   rate: b => { const e = entry(cur), v = Number(b.dataset.v); e[b.dataset.k] = e[b.dataset.k] === v ? 0 : v; touch(e); render(); },
-  otype: b => { const e = entry(cur); e.out.type = b.dataset.v; touch(e); render(); },
   wdone: b => {
     const e = entry(cur), w = b.dataset.w;
     e[w].done = !e[w].done;
@@ -765,12 +714,6 @@ document.addEventListener('input', ev => {
 document.addEventListener('change', ev => {
   const t = ev.target;
   if (t.id === 'photoIn' && t.files[0]) addPhoto(t.files[0]);
-  else if (t.id === 'sessSel') {
-    const e = entry(cur), hasData = e.inside.ex.some(x => x.s.some(v => String(v).trim()));
-    if (hasData && !confirm('Switch session? The sets you logged for this session will be cleared.')) { t.value = e.inside.key; return; }
-    const done = e.inside.done, notes = e.inside.notes;
-    e.inside = { ...sessionFrom(t.value), done, notes }; touch(e); render();
-  }
   else if (t.id === 'startIn' && t.value) { state.startDate = t.value; state.startSetAt = Date.now(); metaDirty = true; persist(); scheduleSync(2000); updateHeader(); }
   else if (t.dataset.s) { settings[t.dataset.s] = t.value.trim(); LS.set('h75.settings', settings); updateHeader(); }
 });
